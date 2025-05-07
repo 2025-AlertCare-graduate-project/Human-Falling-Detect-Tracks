@@ -152,16 +152,20 @@ class YOLOLayer(nn.Module):
 
         # Add offset and scale with anchors
         pred_boxes = FloatTensor(prediction[..., :4].shape)
-        pred_boxes[..., 0] = x.data + self.grid_x
-        pred_boxes[..., 1] = y.data + self.grid_y
-        pred_boxes[..., 2] = torch.exp(w.data) * self.anchor_w
-        pred_boxes[..., 3] = torch.exp(h.data) * self.anchor_h
+        pred_boxes[..., 0] = x.data + self.grid_x.to(x.device)
+        pred_boxes[..., 1] = y.data + self.grid_y.to(x.device)
+        pred_boxes[..., 2] = torch.exp(w.data) * self.anchor_w.to(x.device)
+        pred_boxes[..., 3] = torch.exp(h.data) * self.anchor_h.to(x.device)
 
+        # Ensure the stride_tensor is on the same device as pred_boxes
+        stride_tensor = torch.tensor(self.stride, device=pred_boxes.device)
+
+        # Ensure all tensors are on the same device before concatenation
         output = torch.cat(
             (
-                pred_boxes.view(num_samples, -1, 4) * self.stride,
-                pred_conf.view(num_samples, -1, 1),
-                pred_cls.view(num_samples, -1, self.num_classes),
+                pred_boxes.view(num_samples, -1, 4) * stride_tensor,
+                pred_conf.view(num_samples, -1, 1).to(pred_boxes.device),
+                pred_cls.view(num_samples, -1, self.num_classes).to(pred_boxes.device),
             ),
             -1,
         )

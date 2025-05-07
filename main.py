@@ -20,7 +20,6 @@ from ActionsEstLoader import TSSTG
 source = '../Data/falldata/Home/Videos/video (1).avi'
 #source = 2
 
-
 def preproc(image):
     """preprocess function for CameraLoader.
     """
