@@ -6,7 +6,7 @@ import torchvision.transforms as transforms
 from queue import Queue
 from threading import Thread
 
-from Detection.Utils import non_max_suppression, ResizePadding
+from Detection.Utils import ResizePadding
 from ultralytics import YOLO
 
 class YOLO11_onecls(object):

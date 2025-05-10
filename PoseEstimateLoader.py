@@ -1,5 +1,3 @@
-import os
-import cv2
 import torch
 
 from SPPE.src.main_fast_inference import InferenNet_fast, InferenNet_fastRes50

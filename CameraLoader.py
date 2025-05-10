@@ -1,7 +1,5 @@
-import os
 import cv2
 import time
-import torch
 import numpy as np
 
 from queue import Queue

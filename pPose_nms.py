@@ -1,10 +1,5 @@
 # -*- coding: utf-8 -*-
 import torch
-import json
-import os
-import zipfile
-import time
-from multiprocessing.dummy import Pool as ThreadPool
 import numpy as np
 
 ''' Constant Configuration '''
