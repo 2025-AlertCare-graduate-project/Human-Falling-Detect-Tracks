@@ -10,7 +10,7 @@ from PIL import Image, ImageTk
 
 from Detection.Utils import ResizePadding
 from CameraLoader import CamLoader, CamLoader_Q
-from DetectorLoader import TinyYOLOv3_onecls
+from DetectorLoader_yolo11 import YOLO11_onecls
 
 from PoseEstimateLoader import SPPE_FastPose
 from fn import draw_single
@@ -44,7 +44,7 @@ class Models:
         self.load_models()
 
     def load_models(self):
-        self.detect_model = TinyYOLOv3_onecls(self.inp_dets, device=self.device)
+        self.detect_model = YOLO11_onecls(self.inp_dets, device=self.device)
         self.pose_model = SPPE_FastPose(self.pose_backbone, self.inp_pose[0], self.inp_pose[1],
                                         device=self.device)
         self.tracker = Tracker(30, n_init=3)

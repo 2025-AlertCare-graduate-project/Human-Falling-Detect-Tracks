@@ -7,7 +7,7 @@ import numpy as np
 
 from Detection.Utils import ResizePadding
 from CameraLoader import CamLoader, CamLoader_Q
-from DetectorLoader import TinyYOLOv3_onecls
+from DetectorLoader_yolo11 import YOLO11_onecls
 
 from PoseEstimateLoader import SPPE_FastPose
 from fn import draw_single
@@ -61,7 +61,7 @@ if __name__ == '__main__':
 
     # DETECTION MODEL.
     inp_dets = args.detection_input_size
-    detect_model = TinyYOLOv3_onecls(inp_dets, device=device)
+    detect_model = YOLO11_onecls(inp_dets, device=device)
 
     # POSE MODEL.
     inp_pose = args.pose_input_size.split('x')
@@ -103,6 +103,7 @@ if __name__ == '__main__':
         image = frame.copy()
 
         # Detect humans bbox in the frame with detector model.
+        # [민서] detect_model = yolo11로 호출
         detected = detect_model.detect(frame, need_resize=False, expand_bb=10)
 
         # Predict each tracks bbox of current frame from previous frames information with Kalman filter.

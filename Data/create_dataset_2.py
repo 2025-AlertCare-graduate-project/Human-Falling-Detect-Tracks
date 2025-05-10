@@ -16,7 +16,7 @@ import pandas as pd
 import numpy as np
 import torchvision.transforms as transforms
 
-from DetectorLoader import TinyYOLOv3_onecls
+from DetectorLoader_yolo11 import YOLO11_onecls
 from PoseEstimateLoader import SPPE_FastPose
 from fn import vis_frame_fast
 
@@ -27,7 +27,7 @@ video_folder = '../Data/falldata/Home/Videos'
 annot_folder = '../Data/falldata/Home/Annotation_files'  # bounding box annotation for each frame.
 
 # DETECTION MODEL.
-detector = TinyYOLOv3_onecls()
+detector = YOLO11_onecls()
 
 # POSE MODEL.
 inp_h = 320
