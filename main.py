@@ -130,6 +130,9 @@ if __name__ == '__main__':
                 for bb in detected[:, 0:5]:
                     frame = cv2.rectangle(frame, (bb[0], bb[1]), (bb[2], bb[3]), (0, 0, 255), 1)
 
+        else:
+            print("⚠️ detected가 None이거나 비어 있음 → 포즈 예측 생략")
+
         # Update tracks by matching each track information of current and previous frame or
         # create a new track if no matched.
         tracker.update(detections)

@@ -62,39 +62,33 @@ class YOLO11_onecls(object):
         person_confidences = confidences[is_person]
         person_classes = classes[is_person]
 
-        # 가장 신뢰도 높은 person 1개만 추출
-        top_person_box = top_person_conf = top_person_class = None # 변수 초기화
-        if person_boxes.shape[0] > 0:
-            top_idx = torch.argmax(person_confidences)
-            top_person_box = person_boxes[top_idx]
-            top_person_conf = person_confidences[top_idx]
-            top_person_class = person_classes[top_idx]
-            print("🟢 yolo11n 가상 신뢰도 높은 사람 박스:", top_person_box)
-        else:
+        # 사람이 detect 되지 않으면 빈 tensor 반환
+        if person_boxes.shape[0] == 0:
             print("🔴 사람 클래스가 발견되지 않음")
+            return torch.empty((0, 7))
 
-        # 2D로 변환
+        # 가장 신뢰도 높은 사람 1명 추출
+        top_idx = torch.argmax(person_confidences)
+        top_person_box = person_boxes[top_idx]
+        top_person_conf = person_confidences[top_idx]
+        top_person_class = person_classes[top_idx]
+
+        print("🟢 yolo11n 가상 신뢰도 높은 사람 박스:", top_person_box)
+
+        # 형식 맞추기
         op_person_box_2d = top_person_box.unsqueeze(0)
         top_person_conf_2d = torch.tensor([[top_person_conf]])
         top_person_class_2d = torch.tensor([[top_person_class]])
-
-        # 결과값 맞추기
         detections = torch.cat([op_person_box_2d, top_person_conf_2d, top_person_conf_2d, top_person_class_2d], dim=1)
 
-        # 바운딩 박스 확장
-        if detections is not None:
-            detections[:, [0, 2]] -= (self.input_size - image_size[1]) / 2  # 좌우 확장
-            detections[:, [1, 3]] -= (self.input_size - image_size[0]) / 2  # 상하 확장
+        # 좌표 복원 및 박스 확장
+        detections[:, [0, 2]] -= (self.input_size - image_size[1]) / 2
+        detections[:, [1, 3]] -= (self.input_size - image_size[0]) / 2
+        detections[:, 0:4] /= scf
+        detections[:, 0:2] = np.maximum(0, detections[:, 0:2] - expand_bb)
+        detections[:, 2:4] = np.minimum(image_size[::-1], detections[:, 2:4] + expand_bb)
 
-            # 원본 이미지 크기에 맞게 스케일링
-            detections[:, 0:4] /= scf
-
-            # 바운딩 박스 경계 확장
-            detections[:, 0:2] = np.maximum(0, detections[:, 0:2] - expand_bb)
-            detections[:, 2:4] = np.minimum(image_size[::-1], detections[:, 2:4] + expand_bb)
-
-        # 반환 형식 : tensor
-        return detections if len(detections) > 0 else None
+        return detections
 
 class ThreadDetection(object):
     def __init__(self,
