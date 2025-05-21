@@ -59,6 +59,8 @@ if __name__ == '__main__':
 
     device = args.device
 
+    fall_detected = False
+
     # DETECTION MODEL.
     inp_dets = args.detection_input_size
     detect_model = YOLO11_onecls(inp_dets, device=device)
@@ -97,13 +99,22 @@ if __name__ == '__main__':
 
     fps_time = 0
     f = 0
+
+    fps = 30
+    clip_duration = 15
+    clip_index = 1
+    clip_start_time = time.time()
+    height, width = inp_dets * 2, inp_dets * 2
+    fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+    os.makedirs('OUTPUT', exist_ok=True)
+    video_clip_writer = cv2.VideoWriter(f'OUTPUT/output_{clip_index:03d}.avi', fourcc, fps, (width, height))
+
     while cam.grabbed():
         f += 1
         frame = cam.getitem()
         image = frame.copy()
 
         # Detect humans bbox in the frame with detector model.
-        # [민서] detect_model = yolo11로 호출
         detected = detect_model.detect(frame, need_resize=False, expand_bb=10)
 
         # Predict each tracks bbox of current frame from previous frames information with Kalman filter.
@@ -130,9 +141,6 @@ if __name__ == '__main__':
                 for bb in detected[:, 0:5]:
                     frame = cv2.rectangle(frame, (bb[0], bb[1]), (bb[2], bb[3]), (0, 0, 255), 1)
 
-        else:
-            print("⚠️ detected가 None이거나 비어 있음 → 포즈 예측 생략")
-
         # Update tracks by matching each track information of current and previous frame or
         # create a new track if no matched.
         tracker.update(detections)
@@ -156,6 +164,8 @@ if __name__ == '__main__':
                 action = '{}: {:.2f}%'.format(action_name, out[0].max() * 100)
                 if action_name == 'Fall Down':
                     clr = (255, 0, 0)
+                    fall_detected = True
+
                 elif action_name == 'Lying Down':
                     clr = (255, 200, 0)
 
@@ -179,6 +189,23 @@ if __name__ == '__main__':
         if outvid:
             writer.write(frame)
 
+        now = time.time()
+        if now - clip_start_time >= clip_duration:
+            video_clip_writer.release()
+
+            if fall_detected:
+                new_name = f'OUTPUT/output_{clip_index:03d}_fall.avi'
+                os.rename(current_clip_filename, new_name)
+            clip_index += 1
+            fall_detected = False
+
+            current_clip_filename = f'OUTPUT/output_{clip_index:03d}.avi'
+            video_clip_writer = cv2.VideoWriter(current_clip_filename, fourcc, fps, (width, height))
+
+            clip_start_time = now
+
+        video_clip_writer.write(frame)
+
         cv2.imshow('frame', frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
@@ -187,4 +214,5 @@ if __name__ == '__main__':
     cam.stop()
     if outvid:
         writer.release()
+    video_clip_writer.release()
     cv2.destroyAllWindows()
