@@ -60,6 +60,8 @@ if __name__ == '__main__':
 
     device = args.device
 
+    fall_detected = False
+
     # DETECTION MODEL.
     inp_dets = args.detection_input_size
     detect_model = TinyYOLOv3_onecls(inp_dets, device=device)
@@ -98,6 +100,17 @@ if __name__ == '__main__':
 
     fps_time = 0
     f = 0
+
+    fps = 30  # 저장할 프레임 속도 (원 영상 fps와 동일하게 맞추면 좋음)
+    clip_duration = 15  # 초 단위로 저장
+    clip_index = 1
+    clip_start_time = time.time()
+    height, width = inp_dets * 2, inp_dets * 2
+    fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+    os.makedirs('OUTPUT', exist_ok=True)
+    video_clip_writer = cv2.VideoWriter(f'OUTPUT/output_{clip_index:03d}.avi', fourcc, fps, (width, height))
+
+
     while cam.grabbed():
         f += 1
         frame = cam.getitem()
@@ -153,6 +166,8 @@ if __name__ == '__main__':
                 action = '{}: {:.2f}%'.format(action_name, out[0].max() * 100)
                 if action_name == 'Fall Down':
                     clr = (255, 0, 0)
+                    fall_detected = True
+
                 elif action_name == 'Lying Down':
                     clr = (255, 200, 0)
 
@@ -176,6 +191,23 @@ if __name__ == '__main__':
         if outvid:
             writer.write(frame)
 
+        now = time.time()
+        if now - clip_start_time >= clip_duration:
+            video_clip_writer.release()
+
+            if fall_detected:
+                new_name = f'output_{clip_index:03d}_fall.avi'
+                os.rename(current_clip_filename, new_name)
+            clip_index += 1
+            fall_detected = False
+
+            current_clip_filename = os.path.join('OUTPUT', f'output_{clip_index:03d}.avi')
+            video_clip_writer = cv2.VideoWriter(current_clip_filename, fourcc, fps, (width, height))
+
+            clip_start_time = now
+
+        video_clip_writer.write(frame)
+
         cv2.imshow('frame', frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
@@ -184,4 +216,5 @@ if __name__ == '__main__':
     cam.stop()
     if outvid:
         writer.release()
+    video_clip_writer.release()
     cv2.destroyAllWindows()
