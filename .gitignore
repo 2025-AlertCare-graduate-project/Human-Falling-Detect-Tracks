@@ -1,2 +1,5 @@
 *.idea
 Models/*
+OUTPUT/*
+__pycache__/
+*.pyc
