@@ -14,7 +14,7 @@ from fn import draw_single
 
 from Track.Tracker import Detection, Tracker
 from ActionsEstLoader import TSSTG
-from s3_utils import upload_video_to_s3
+from s3_utils import upload_video, send_url
 
 #source = '../Data/test_video/test7.mp4'
 #source = '../Data/falldata/Home/Videos/video (2).avi'  # hard detect
@@ -199,8 +199,9 @@ if __name__ == '__main__':
 
             local_file = current_clip_filename
             try:
-                s3_url = upload_video_to_s3(local_file)
+                s3_url = upload_video(local_file)
                 print(f"[S3] 업로드 완료: {s3_url}")
+                send_url(s3_url)
             except Exception as e:
                 print(f"[Error] S3 업로드 또는 Spring 전송 실패:", e)
 
@@ -227,8 +228,9 @@ if __name__ == '__main__':
         writer.release()
     video_clip_writer.release()
     try:
-        s3_url = upload_video_to_s3(current_clip_filename)
+        s3_url = upload_video(current_clip_filename)
         print(f"[S3] 마지막 클립 업로드 완료: {s3_url}")
+        send_url(s3_url)
     except Exception as e:
         print(f"[Error] 마지막 클립 S3 업로드 실패:", e)
     cv2.destroyAllWindows()

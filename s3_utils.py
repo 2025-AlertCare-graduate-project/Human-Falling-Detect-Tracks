@@ -18,10 +18,19 @@ s3 = boto3.client(
     region_name           = AWS_REGION
 )
 
-def upload_video_to_s3(local_path, s3_folder='videos'):
+def upload_video(local_path, s3_folder='videos'):
     filename = os.path.basename(local_path)
     key = f"{s3_folder}/{uuid.uuid4().hex}_{filename}"
     s3.upload_file(local_path, BUCKET_NAME, key)
     url = f"https://{BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{key}"
     return url
 
+SPRING_URL = 'http://localhost:8080/api/videos'  #엔드포인트
+
+def send_url(video_url):
+    payload = {'videoUrl': video_url}
+    resp = requests.post(SPRING_URL, json=payload)
+    if resp.status_code == 200:
+        print(f"[Spring] 저장 성공: {video_url}")
+    else:
+        print(f"[Spring] 저장 실패 ({resp.status_code}): {resp.text}")
