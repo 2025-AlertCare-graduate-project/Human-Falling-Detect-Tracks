@@ -14,6 +14,7 @@ from fn import draw_single
 
 from Track.Tracker import Detection, Tracker
 from ActionsEstLoader import TSSTG
+from s3_utils import upload_video_to_s3
 
 #source = '../Data/test_video/test7.mp4'
 #source = '../Data/falldata/Home/Videos/video (2).avi'  # hard detect
@@ -67,8 +68,7 @@ if __name__ == '__main__':
     detect_model = TinyYOLOv3_onecls(inp_dets, device=device)
 
     # POSE MODEL.
-    inp_pose = args.pose_input_size.split('x')
-    inp_pose = (int(inp_pose[0]), int(inp_pose[1]))
+    inp_pose = tuple(map(int, args.pose_input_size.split('x')))
     pose_model = SPPE_FastPose(args.pose_backbone, inp_pose[0], inp_pose[1], device=device)
 
     # Tracker.
@@ -92,11 +92,11 @@ if __name__ == '__main__':
     #frame_size = cam.frame_size
     #scf = torch.min(inp_size / torch.FloatTensor([frame_size]), 1)[0]
 
-    outvid = False
-    if args.save_out != '':
-        outvid = True
+    outvid = bool(args.save_out)
+    if outvid:
         codec = cv2.VideoWriter_fourcc(*'MJPG')
         writer = cv2.VideoWriter(args.save_out, codec, 30, (inp_dets * 2, inp_dets * 2))
+
 
     fps_time = 0
     f = 0
@@ -108,7 +108,9 @@ if __name__ == '__main__':
     height, width = inp_dets * 2, inp_dets * 2
     fourcc = cv2.VideoWriter_fourcc(*'MJPG')
     os.makedirs('OUTPUT', exist_ok=True)
-    video_clip_writer = cv2.VideoWriter(f'OUTPUT/output_{clip_index:03d}.avi', fourcc, fps, (width, height))
+
+    current_clip_filename = os.path.join('OUTPUT', f'output_{clip_index:03d}.avi')
+    video_clip_writer = cv2.VideoWriter(current_clip_filename, fourcc, fps, (width, height))
 
 
     while cam.grabbed():
@@ -195,6 +197,13 @@ if __name__ == '__main__':
         if now - clip_start_time >= clip_duration:
             video_clip_writer.release()
 
+            local_file = current_clip_filename
+            try:
+                s3_url = upload_video_to_s3(local_file)
+                print(f"[S3] 업로드 완료: {s3_url}")
+            except Exception as e:
+                print(f"[Error] S3 업로드 또는 Spring 전송 실패:", e)
+
             if fall_detected:
                 new_name = f'output_{clip_index:03d}_fall.avi'
                 os.rename(current_clip_filename, new_name)
@@ -217,4 +226,9 @@ if __name__ == '__main__':
     if outvid:
         writer.release()
     video_clip_writer.release()
+    try:
+        s3_url = upload_video_to_s3(current_clip_filename)
+        print(f"[S3] 마지막 클립 업로드 완료: {s3_url}")
+    except Exception as e:
+        print(f"[Error] 마지막 클립 S3 업로드 실패:", e)
     cv2.destroyAllWindows()
