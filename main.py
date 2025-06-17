@@ -201,13 +201,10 @@ if __name__ == '__main__':
             try:
                 s3_url = upload_video(local_file)
                 print(f"[S3] 업로드 완료: {s3_url}")
-                send_url(s3_url)
+                send_url(s3_url, fall_detected) # 낙상 여부 포함해서 전송
             except Exception as e:
-                print(f"[Error] S3 업로드 또는 Spring 전송 실패:", e)
+                print(f"[Error] S3 업로드 또는 스프링 전송 실패:", e)
 
-            if fall_detected:
-                new_name = f'output_{clip_index:03d}_fall.avi'
-                os.rename(current_clip_filename, new_name)
             clip_index += 1
             fall_detected = False
 
@@ -230,7 +227,7 @@ if __name__ == '__main__':
     try:
         s3_url = upload_video(current_clip_filename)
         print(f"[S3] 마지막 클립 업로드 완료: {s3_url}")
-        send_url(s3_url)
+        send_url(s3_url, fall_detected)
     except Exception as e:
         print(f"[Error] 마지막 클립 S3 업로드 실패:", e)
     cv2.destroyAllWindows()

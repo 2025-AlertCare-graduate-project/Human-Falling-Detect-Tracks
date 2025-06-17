@@ -27,8 +27,11 @@ def upload_video(local_path, s3_folder='videos'):
 
 SPRING_URL = 'http://localhost:8080/api/videos'  #엔드포인트
 
-def send_url(video_url):
-    payload = {'videoUrl': video_url}
+def send_url(video_url, fall_detected):
+    payload = {
+        'videoUrl': video_url,
+        'fallDetected': fall_detected  # 또는 'fall_detected'로도 가능 (서버 쪽 JSON 필드 이름에 맞춰야 함)
+    }
     resp = requests.post(SPRING_URL, json=payload)
     if resp.status_code == 200:
         print(f"[Spring] 저장 성공: {video_url}")
