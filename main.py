@@ -94,7 +94,7 @@ if __name__ == '__main__':
 
     outvid = bool(args.save_out)
     if outvid:
-        codec = cv2.VideoWriter_fourcc(*'MJPG')
+        codec = cv2.VideoWriter_fourcc(*'mp4v')
         writer = cv2.VideoWriter(args.save_out, codec, 30, (inp_dets * 2, inp_dets * 2))
 
 
@@ -106,10 +106,10 @@ if __name__ == '__main__':
     clip_index = 1
     clip_start_time = time.time()
     height, width = inp_dets * 2, inp_dets * 2
-    fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+    fourcc = cv2.VideoWriter_fourcc(*'avc1')
     os.makedirs('OUTPUT', exist_ok=True)
 
-    current_clip_filename = os.path.join('OUTPUT', f'output_{clip_index:03d}.avi')
+    current_clip_filename = os.path.join('OUTPUT', f'output_{clip_index:03d}.mp4')
     video_clip_writer = cv2.VideoWriter(current_clip_filename, fourcc, fps, (width, height))
 
 
@@ -208,7 +208,7 @@ if __name__ == '__main__':
             clip_index += 1
             fall_detected = False
 
-            current_clip_filename = os.path.join('OUTPUT', f'output_{clip_index:03d}.avi')
+            current_clip_filename = os.path.join('OUTPUT', f'output_{clip_index:03d}.mp4')
             video_clip_writer = cv2.VideoWriter(current_clip_filename, fourcc, fps, (width, height))
 
             clip_start_time = now
