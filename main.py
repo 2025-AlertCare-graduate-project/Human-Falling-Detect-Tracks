@@ -101,7 +101,7 @@ if __name__ == '__main__':
     fps_time = 0
     f = 0
 
-    fps = 30  # 저장할 프레임 속도 (원 영상 fps와 동일하게 맞추면 좋음)
+    fps = 4  # 저장할 프레임 속도 (원 영상 fps와 동일하게 맞추면 좋음)
     clip_duration = 15  # 초 단위로 저장
     clip_index = 1
     clip_start_time = time.time()
