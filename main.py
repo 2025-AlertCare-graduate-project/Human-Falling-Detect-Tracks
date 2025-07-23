@@ -9,7 +9,7 @@ from Detection.Utils import ResizePadding
 from CameraLoader import CamLoader, CamLoader_Q
 from DetectorLoader_yolo11 import YOLO11_onecls
 
-from PoseEstimateLoader import SPPE_FastPose
+from PoseEstimateLoader_yolo11 import UltralyticsPoseFromBBoxes
 from fn import draw_single
 
 from Track.Tracker import Detection, Tracker
@@ -65,10 +65,10 @@ if __name__ == '__main__':
     inp_dets = args.detection_input_size
     detect_model = YOLO11_onecls(inp_dets, device=device)
 
-    # POSE MODEL.
+    # POSE MODEL
     inp_pose = args.pose_input_size.split('x')
     inp_pose = (int(inp_pose[0]), int(inp_pose[1]))
-    pose_model = SPPE_FastPose(args.pose_backbone, inp_pose[0], inp_pose[1], device=device)
+    pose_model = UltralyticsPoseFromBBoxes('yolo11n-pose.pt', input_size=inp_pose, device=device)
 
     # Tracker.
     max_age = 30
@@ -132,14 +132,15 @@ if __name__ == '__main__':
 
             # Create Detections object.
             detections = [Detection(kpt2bbox(ps['keypoints'].numpy()),
-                                    np.concatenate((ps['keypoints'].numpy(),
-                                                    ps['kp_score'].numpy()), axis=1),
+                                    np.concatenate(
+                                        [ps['keypoints'].numpy(), ps['kp_score'].numpy()],
+                                        axis=1),
                                     ps['kp_score'].mean().numpy()) for ps in poses]
 
             # VISUALIZE.
             if args.show_detected:
                 for bb in detected[:, 0:5]:
-                    frame = cv2.rectangle(frame, (bb[0], bb[1]), (bb[2], bb[3]), (0, 0, 255), 1)
+                    frame = cv2.rectangle(frame, (int(bb[0]), int(bb[1])), (int(bb[2]), int(bb[3])), (0, 0, 255), 1)
 
         # Update tracks by matching each track information of current and previous frame or
         # create a new track if no matched.
