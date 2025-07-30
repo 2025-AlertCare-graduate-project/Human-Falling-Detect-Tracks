@@ -1,5 +1,7 @@
 __pycache__/*
 .idea
-Models/*
+Models/
 *.pyc
-OUTPUT/*
+OUTPUT/
+*.env
+*.pt
