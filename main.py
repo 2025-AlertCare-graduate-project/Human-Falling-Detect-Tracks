@@ -60,6 +60,8 @@ if __name__ == '__main__':
                      help='Save display to video file.')
     par.add_argument('--device', type=str, default='cuda',
                      help='Device to run model on cpu or cuda.')
+    par.add_argument('--phone_number', type=str, default='01012345678',
+                     help='대쉬 없이 유저 전화번호 입력, 디폴트 = 01012345678')
     args = par.parse_args()
 
     device = args.device
@@ -226,7 +228,7 @@ if __name__ == '__main__':
                 try:
                     s3_url = upload_video(merged_path)
                     print(f"[S3] 병합 영상 업로드 완료: {s3_url}")
-                    send_url(s3_url, pre_fall_detected, pre_detected_time)
+                    send_url(s3_url,args.phone_number, pre_fall_detected, pre_detected_time)
                 except Exception as e:
                     print(f"[Error] 병합 영상 업로드 실패: {e}")
                 else:
@@ -259,7 +261,7 @@ if __name__ == '__main__':
     try:
         s3_url = upload_video(current_clip_filename)
         print(f"[S3] 마지막 클립 업로드 완료: {s3_url}")
-        send_url(s3_url, fall_detected, detected_time)
+        send_url(s3_url, args.phone_number, fall_detected, detected_time)
     except Exception as e:
         print(f"[Error] 마지막 클립 S3 업로드 실패:", e)
     cv2.destroyAllWindows()
