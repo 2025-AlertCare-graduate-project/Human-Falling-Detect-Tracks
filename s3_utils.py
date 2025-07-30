@@ -27,11 +27,12 @@ def upload_video(local_path, s3_folder='videos'):
 
 SPRING_URL = 'http://localhost:8080/api/v1/videos'  #엔드포인트
 
-def send_url(video_url, phone_num, fall_detected):
+def send_url(video_url, phone_num, fall_detected, detected_time):
     payload = {
         'videoUrl': video_url,
         'careReceiverPhoneNumber' : phone_num,
-        'fallDetected': fall_detected  # 또는 'fall_detected'로도 가능 (서버 쪽 JSON 필드 이름에 맞춰야 함)
+        'fallDetected': fall_detected,  # 또는 'fall_detected'로도 가능 (서버 쪽 JSON 필드 이름에 맞춰야 함)
+        'detectedTime' : detected_time
     }
     resp = requests.post(SPRING_URL, json=payload)
     if resp.status_code == 200:

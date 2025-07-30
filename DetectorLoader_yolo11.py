@@ -73,7 +73,7 @@ class YOLO11_onecls(object):
         top_person_conf = person_confidences[top_idx]
         top_person_class = person_classes[top_idx]
 
-        print("🟢 yolo11n 가상 신뢰도 높은 사람 박스:", top_person_box)
+        # print("🟢 yolo11n 가상 신뢰도 높은 사람 박스:", top_person_box)
 
         # 형식 맞추기
         op_person_box_2d = top_person_box.unsqueeze(0)
