@@ -15,6 +15,7 @@ from fn import draw_single
 from Track.Tracker import Detection, Tracker
 from ActionsEstLoader import TSSTG
 from s3_utils import upload_video, send_url
+from datetime import datetime
 
 #source = '../Data/test_video/test7.mp4'
 #source = '../Data/falldata/Home/Videos/video (2).avi'  # hard detect
@@ -62,6 +63,7 @@ if __name__ == '__main__':
     device = args.device
 
     fall_detected = False
+    detected_time = "null"
 
     # DETECTION MODEL.
     inp_dets = args.detection_input_size
@@ -169,6 +171,7 @@ if __name__ == '__main__':
                 if action_name == 'Fall Down':
                     clr = (255, 0, 0)
                     fall_detected = True
+                    detected_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
                 elif action_name == 'Lying Down':
                     clr = (255, 200, 0)
@@ -201,12 +204,13 @@ if __name__ == '__main__':
             try:
                 s3_url = upload_video(local_file)
                 print(f"[S3] 업로드 완료: {s3_url}")
-                send_url(s3_url, fall_detected) # 낙상 여부 포함해서 전송
+                send_url(s3_url, fall_detected, detected_time) # 낙상 여부 포함해서 전송
             except Exception as e:
                 print(f"[Error] S3 업로드 또는 스프링 전송 실패:", e)
 
             clip_index += 1
             fall_detected = False
+            detected_time = "null"
 
             current_clip_filename = os.path.join('OUTPUT', f'output_{clip_index:03d}.mp4')
             video_clip_writer = cv2.VideoWriter(current_clip_filename, fourcc, fps, (width, height))
@@ -227,7 +231,7 @@ if __name__ == '__main__':
     try:
         s3_url = upload_video(current_clip_filename)
         print(f"[S3] 마지막 클립 업로드 완료: {s3_url}")
-        send_url(s3_url, fall_detected)
+        send_url(s3_url, fall_detected, detected_time)
     except Exception as e:
         print(f"[Error] 마지막 클립 S3 업로드 실패:", e)
     cv2.destroyAllWindows()
