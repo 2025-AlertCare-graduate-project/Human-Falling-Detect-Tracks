@@ -16,6 +16,8 @@ from Track.Tracker import Detection, Tracker
 from ActionsEstLoader import TSSTG
 from s3_utils import upload_video, send_url
 from datetime import datetime
+from merge_utils import merge_videos
+
 
 #source = '../Data/test_video/test7.mp4'
 #source = '../Data/falldata/Home/Videos/video (2).avi'  # hard detect
@@ -43,26 +45,32 @@ def kpt2bbox(kpt, ex=20):
 if __name__ == '__main__':
     par = argparse.ArgumentParser(description='Human Fall Detection Demo.')
     par.add_argument('-C', '--camera', default=source,  # required=True,  # default=2,
-                        help='Source of camera or video file path.')
+                     help='Source of camera or video file path.')
     par.add_argument('--detection_input_size', type=int, default=384,
-                        help='Size of input in detection model in square must be divisible by 32 (int).')
+                     help='Size of input in detection model in square must be divisible by 32 (int).')
     par.add_argument('--pose_input_size', type=str, default='224x160',
-                        help='Size of input in pose model must be divisible by 32 (h, w)')
+                     help='Size of input in pose model must be divisible by 32 (h, w)')
     par.add_argument('--pose_backbone', type=str, default='resnet50',
-                        help='Backbone model for SPPE FastPose model.')
+                     help='Backbone model for SPPE FastPose model.')
     par.add_argument('--show_detected', default=False, action='store_true',
-                        help='Show all bounding box from detection.')
+                     help='Show all bounding box from detection.')
     par.add_argument('--show_skeleton', default=True, action='store_true',
-                        help='Show skeleton pose.')
+                     help='Show skeleton pose.')
     par.add_argument('--save_out', type=str, default='',
-                        help='Save display to video file.')
+                     help='Save display to video file.')
     par.add_argument('--device', type=str, default='cuda',
-                        help='Device to run model on cpu or cuda.')
+                     help='Device to run model on cpu or cuda.')
     args = par.parse_args()
 
     device = args.device
 
     fall_detected = False
+    pre_fall_detected = False
+
+    pre_detected1 = False
+    pre_detected2 = False
+
+    pre_detected_time = "null"
     detected_time = "null"
 
     # DETECTION MODEL.
@@ -103,9 +111,10 @@ if __name__ == '__main__':
     fps_time = 0
     f = 0
 
-    fps = 4  # 저장할 프레임 속도 (원 영상 fps와 동일하게 맞추면 좋음)
+    fps = 30  # 저장할 프레임 속도 (원 영상 fps와 동일하게 맞추면 좋음)
     clip_duration = 15  # 초 단위로 저장
     clip_index = 1
+    recent_clips = []
     clip_start_time = time.time()
     height, width = inp_dets * 2, inp_dets * 2
     fourcc = cv2.VideoWriter_fourcc(*'avc1')
@@ -171,6 +180,7 @@ if __name__ == '__main__':
                 if action_name == 'Fall Down':
                     clr = (255, 0, 0)
                     fall_detected = True
+                    pre_detected1 = True
                     detected_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
                 elif action_name == 'Lying Down':
@@ -198,17 +208,35 @@ if __name__ == '__main__':
 
         now = time.time()
         if now - clip_start_time >= clip_duration:
+            print(f"[INFO] 클립 종료 - 인덱스: {clip_index}")
+            print(f"[INFO] 최근 클립 리스트: {recent_clips}")
+            print(f"[INFO] pre_detected1: {pre_detected1}, pre_detected2: {pre_detected2}")
+            print(f"[INFO] fall_detected: {fall_detected}, detected_time: {detected_time}")
             video_clip_writer.release()
 
-            local_file = current_clip_filename
-            try:
-                s3_url = upload_video(local_file)
-                print(f"[S3] 업로드 완료: {s3_url}")
-                send_url(s3_url, fall_detected, detected_time) # 낙상 여부 포함해서 전송
-            except Exception as e:
-                print(f"[Error] S3 업로드 또는 스프링 전송 실패:", e)
+            recent_clips.append(current_clip_filename)
+            if len(recent_clips) > 3:
+                os.remove(recent_clips.pop(0))  # 오래된 영상 삭제
+
+            if pre_detected2:
+                print("[Fall] 이전에 T였음. 영상 병합 시작...")
+                merged_path = os.path.join('OUTPUT', f'merged_{clip_index:03d}.mp4')
+                merge_videos(recent_clips[-3:], merged_path)
+
+                try:
+                    s3_url = upload_video(merged_path)
+                    print(f"[S3] 병합 영상 업로드 완료: {s3_url}")
+                    send_url(s3_url, pre_fall_detected, pre_detected_time)
+                except Exception as e:
+                    print(f"[Error] 병합 영상 업로드 실패: {e}")
+                else:
+                    print("[Info] 감지되지 않음 → 병합 X")
 
             clip_index += 1
+            pre_detected2 = pre_detected1
+            pre_detected1 = False
+            pre_fall_detected = fall_detected
+            pre_detected_time = detected_time
             fall_detected = False
             detected_time = "null"
 
