@@ -25,7 +25,7 @@ def upload_video(local_path, s3_folder='videos'):
     url = f"https://{BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{key}"
     return url
 
-SPRING_URL = 'http://localhost:8080/api/videos'  #엔드포인트
+SPRING_URL = 'http://3.34.137.110:8080/api/v1/videos'  #엔드포인트
 
 def send_url(video_url, phone_num, fall_detected, detected_time):
     payload = {
@@ -36,6 +36,6 @@ def send_url(video_url, phone_num, fall_detected, detected_time):
     }
     resp = requests.post(SPRING_URL, json=payload)
     if resp.status_code == 200:
-        print(f"[Spring] 저장 성공: {video_url}")
+        print(f"[Spring] 저장 성공: {video_url} {detected_time}")
     else:
         print(f"[Spring] 저장 실패 ({resp.status_code}): {resp.text}")

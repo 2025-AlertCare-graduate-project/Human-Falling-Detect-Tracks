@@ -3,3 +3,4 @@ Models/*
 OUTPUT/*
 __pycache__/
 *.pyc
+.env

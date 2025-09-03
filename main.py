@@ -18,6 +18,8 @@ from s3_utils import upload_video, send_url
 from datetime import datetime
 from merge_utils import merge_videos
 
+from collections import Counter
+from summary_utils import send_summary
 
 #source = '../Data/test_video/test7.mp4'
 #source = '../Data/falldata/Home/Videos/video (2).avi'  # hard detect
@@ -65,6 +67,22 @@ if __name__ == '__main__':
     args = par.parse_args()
 
     device = args.device
+
+    minute_counter = Counter()
+    minute_start = time.time()
+
+
+    hour_summary = {"active": 0, "sitting": 0, "lying": 0}
+    hour_start = time.time()
+
+    category_map = {
+        "Sitting": "sitting",
+        "Sit down": "sitting",
+        "Lying Down": "lying",
+        "Standing": "active",
+        "Stand up": "active",
+        "Walking": "active"
+    }
 
     fall_detected = False
     pre_fall_detected = False
@@ -172,6 +190,7 @@ if __name__ == '__main__':
             center = track.get_center().astype(int)
 
             action = 'pending..'
+            action_name = 'pending'
             clr = (0, 255, 0)
             # Use 30 frames time-steps to prediction.
             if len(track.keypoints_list) == 30:
@@ -187,6 +206,7 @@ if __name__ == '__main__':
 
                 elif action_name == 'Lying Down':
                     clr = (255, 200, 0)
+            minute_counter[action_name] += 1
 
             # VISUALIZE.
             if track.time_since_update == 0:
@@ -208,7 +228,26 @@ if __name__ == '__main__':
         if outvid:
             writer.write(frame)
 
+
+
         now = time.time()
+
+        if now - minute_start >= 60: #1분동안 가장 많이 취한 동작으로 설정
+            if minute_counter:
+                dominant_action, _ = minute_counter.most_common(1)[0]
+                category = category_map.get(dominant_action, "active") #default 값 생각해봐야할듯
+                hour_summary[category] += 1
+
+            # 초기화
+            minute_counter = Counter()
+            minute_start = now
+
+        if now - hour_start >= 3600:
+            send_summary(hour_summary, args.phone_number)
+            # 1시간 요약 초기화
+            hour_summary = {"active": 0, "sitting": 0, "lying": 0}
+            hour_start = now
+
         if now - clip_start_time >= clip_duration:
             print(f"[INFO] 클립 종료 - 인덱스: {clip_index}")
             print(f"[INFO] 최근 클립 리스트: {recent_clips}")
@@ -261,7 +300,7 @@ if __name__ == '__main__':
     try:
         s3_url = upload_video(current_clip_filename)
         print(f"[S3] 마지막 클립 업로드 완료: {s3_url}")
-        send_url(s3_url, args.phone_number, fall_detected, detected_time)
+        #send_url(s3_url, args.phone_number, fall_detected, detected_time)
     except Exception as e:
         print(f"[Error] 마지막 클립 S3 업로드 실패:", e)
     cv2.destroyAllWindows()
