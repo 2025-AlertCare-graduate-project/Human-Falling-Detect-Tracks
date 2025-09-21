@@ -1,27 +1,25 @@
 import os
 import cv2
-import time
 import torch
 import screeninfo
 import numpy as np
 import tkinter as tk
-import matplotlib.pyplot as plt
 from PIL import Image, ImageTk
 
 from Detection.Utils import ResizePadding
-from CameraLoader import CamLoader, CamLoader_Q
-from DetectorLoader_yolo11 import YOLO11_onecls
+from Modules.Video.CameraLoader import CamLoader, CamLoader_Q
+from Modules.Detect.DetectorLoader_yolo11 import YOLO11_onecls
 
-from PoseEstimateLoader import SPPE_FastPose
-from fn import draw_single
+from Modules.Pose.PoseEstimateLoader import SPPE_FastPose
+from Modules.Visualize.fn import draw_single
 
 from Track.Tracker import Detection, Tracker
-from ActionsEstLoader import TSSTG
+from Modules.Action.ActionsEstLoader import TSSTG
 
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 
 def get_monitor_from_coord(x, y):  # multiple monitor dealing.

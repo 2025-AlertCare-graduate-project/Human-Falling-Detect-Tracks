@@ -14,11 +14,10 @@ import time
 import torch
 import pandas as pd
 import numpy as np
-import torchvision.transforms as transforms
 
-from DetectorLoader_yolo11 import YOLO11_onecls
-from PoseEstimateLoader import SPPE_FastPose
-from fn import vis_frame_fast
+from Modules.Detect.DetectorLoader_yolo11 import YOLO11_onecls
+from Modules.Pose.PoseEstimateLoader import SPPE_FastPose
+from Modules.Visualize.fn import vis_frame_fast
 
 save_path = '../../Data/Home_new-pose+score.csv'
 

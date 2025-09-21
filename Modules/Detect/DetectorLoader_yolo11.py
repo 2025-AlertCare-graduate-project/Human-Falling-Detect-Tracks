@@ -12,7 +12,7 @@ from ultralytics import YOLO
 class YOLO11_onecls(object):
     def __init__(self,
                  input_size=416,
-                 weight_file='Models/YOLO/yolo11n.pt',
+                 weight_file='../Models/YOLO/yolo11n.pt',
                  nms=0.2,
                  conf_thres=0.45,
                  device='mps'):

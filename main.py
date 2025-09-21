@@ -6,17 +6,17 @@ import argparse
 import numpy as np
 
 from Detection.Utils import ResizePadding
-from CameraLoader import CamLoader, CamLoader_Q
-from DetectorLoader_yolo11 import YOLO11_onecls
+from Modules.Video.CameraLoader import CamLoader, CamLoader_Q
+from Modules.Detect.DetectorLoader_yolo11 import YOLO11_onecls
 
-from PoseEstimateLoader import SPPE_FastPose
-from fn import draw_single
+from Modules.Pose.PoseEstimateLoader import SPPE_FastPose
+from Modules.Visualize.fn import draw_single
 
 from Track.Tracker import Detection, Tracker
-from ActionsEstLoader import TSSTG
-from s3_utils import upload_video, send_url
+from Modules.Action.ActionsEstLoader import TSSTG
+from Modules.Video.s3_utils import upload_video, send_url
 from datetime import datetime
-from merge_utils import merge_videos
+from Modules.Video.merge_utils import merge_videos
 
 
 #source = '../Data/test_video/test7.mp4'
