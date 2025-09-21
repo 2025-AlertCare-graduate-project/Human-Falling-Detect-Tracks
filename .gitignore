@@ -5,3 +5,4 @@ Models/
 OUTPUT/
 *.env
 *.pt
+Dataset/
