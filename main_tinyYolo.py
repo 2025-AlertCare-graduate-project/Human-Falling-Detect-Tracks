@@ -209,43 +209,44 @@ if __name__ == '__main__':
             writer.write(frame)
 
         now = time.time()
-        if now - clip_start_time >= clip_duration:
-            print(f"[INFO] 클립 종료 - 인덱스: {clip_index}")
-            print(f"[INFO] 최근 클립 리스트: {recent_clips}")
-            print(f"[INFO] pre_detected1: {pre_detected1}, pre_detected2: {pre_detected2}")
-            print(f"[INFO] fall_detected: {fall_detected}, detected_time: {detected_time}")
-            video_clip_writer.release()
+        if args.phone_number is not None:
+            if now - clip_start_time >= clip_duration:
+                print(f"[INFO] 클립 종료 - 인덱스: {clip_index}")
+                print(f"[INFO] 최근 클립 리스트: {recent_clips}")
+                print(f"[INFO] pre_detected1: {pre_detected1}, pre_detected2: {pre_detected2}")
+                print(f"[INFO] fall_detected: {fall_detected}, detected_time: {detected_time}")
+                video_clip_writer.release()
 
-            recent_clips.append(current_clip_filename)
-            if len(recent_clips) > 3:
-                os.remove(recent_clips.pop(0))  # 오래된 영상 삭제
+                recent_clips.append(current_clip_filename)
+                if len(recent_clips) > 3:
+                    os.remove(recent_clips.pop(0))  # 오래된 영상 삭제
 
-            if pre_detected2:
-                print("[Fall] 이전에 T였음. 영상 병합 시작...")
-                merged_path = os.path.join('OUTPUT', f'merged_{clip_index:03d}.mp4')
-                merge_videos(recent_clips[-3:], merged_path)
+                if pre_detected2:
+                    print("[Fall] 이전에 T였음. 영상 병합 시작...")
+                    merged_path = os.path.join('OUTPUT', f'merged_{clip_index:03d}.mp4')
+                    merge_videos(recent_clips[-3:], merged_path)
 
-                try:
-                    s3_url = upload_video(merged_path)
-                    print(f"[S3] 병합 영상 업로드 완료: {s3_url}")
-                    send_url(s3_url,args.phone_number, pre_fall_detected, pre_detected_time)
-                except Exception as e:
-                    print(f"[Error] 병합 영상 업로드 실패: {e}")
-                else:
-                    print("[Info] 감지되지 않음 → 병합 X")
+                    try:
+                        s3_url = upload_video(merged_path)
+                        print(f"[S3] 병합 영상 업로드 완료: {s3_url}")
+                        send_url(s3_url,args.phone_number, pre_fall_detected, pre_detected_time)
+                    except Exception as e:
+                        print(f"[Error] 병합 영상 업로드 실패: {e}")
+                    else:
+                        print("[Info] 감지되지 않음 → 병합 X")
 
-            clip_index += 1
-            pre_detected2 = pre_detected1
-            pre_detected1 = False
-            pre_fall_detected = fall_detected
-            pre_detected_time = detected_time
-            fall_detected = False
-            detected_time = "null"
+                clip_index += 1
+                pre_detected2 = pre_detected1
+                pre_detected1 = False
+                pre_fall_detected = fall_detected
+                pre_detected_time = detected_time
+                fall_detected = False
+                detected_time = "null"
 
-            current_clip_filename = os.path.join('OUTPUT', f'output_{clip_index:03d}.mp4')
-            video_clip_writer = cv2.VideoWriter(current_clip_filename, fourcc, fps, (width, height))
+                current_clip_filename = os.path.join('OUTPUT', f'output_{clip_index:03d}.mp4')
+                video_clip_writer = cv2.VideoWriter(current_clip_filename, fourcc, fps, (width, height))
 
-            clip_start_time = now
+                clip_start_time = now
 
         video_clip_writer.write(frame)
 
@@ -258,10 +259,11 @@ if __name__ == '__main__':
     if outvid:
         writer.release()
     video_clip_writer.release()
-    try:
-        s3_url = upload_video(current_clip_filename)
-        print(f"[S3] 마지막 클립 업로드 완료: {s3_url}")
-        send_url(s3_url, args.phone_number, fall_detected, detected_time)
-    except Exception as e:
-        print(f"[Error] 마지막 클립 S3 업로드 실패:", e)
+    if args.phone_number is not None:
+        try:
+            s3_url = upload_video(current_clip_filename)
+            print(f"[S3] 마지막 클립 업로드 완료: {s3_url}")
+            send_url(s3_url, args.phone_number, fall_detected, detected_time)
+        except Exception as e:
+            print(f"[Error] 마지막 클립 S3 업로드 실패:", e)
     cv2.destroyAllWindows()
