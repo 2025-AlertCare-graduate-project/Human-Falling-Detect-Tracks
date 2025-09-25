@@ -25,13 +25,9 @@ def upload_video(local_path, s3_folder='videos'):
     url = f"https://{BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{key}"
     return url
 
-<<<<<<< HEAD:Modules/Video/s3_utils.py
 # SPRING_URL = 'http://localhost:8080/api/v1/videos'  # 로컬
-SPRING_URL = 'http://3.34.137.110:8080/api/v1/videos' # IP
-=======
 SPRING_URL = 'http://3.34.137.110:8080/api/v1/videos'  #엔드포인트
 
->>>>>>> minseo:s3_utils.py
 
 def send_url(video_url, phone_num, fall_detected, detected_time):
     payload = {
