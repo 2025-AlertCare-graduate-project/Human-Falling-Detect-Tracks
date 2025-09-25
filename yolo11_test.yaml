@@ -1,0 +1,7 @@
+path: /Users/minseokyung/Documents/2025-graduate-project/Human-Falling-Detect-Tracks/Dataset/UR_Fall_Detection_Dataset.v1i.yolov11
+
+train: train/images
+val: test/images   # test를 검증셋으로 사용
+
+nc: 2  # 클래스 개수 (예: 0=NotFall, 1=Fall)
+names: ['NotFall', 'Fall']

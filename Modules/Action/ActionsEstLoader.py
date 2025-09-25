@@ -2,7 +2,7 @@ import torch
 import numpy as np
 
 from Actionsrecognition.Models import TwoStreamSpatialTemporalGraph
-from pose_utils import normalize_points_with_size, scale_pose
+from ..Pose.pose_utils import normalize_points_with_size, scale_pose
 
 
 class TSSTG(object):
