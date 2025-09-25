@@ -160,6 +160,7 @@ if __name__ == '__main__':
         # Update tracks by matching each track information of current and previous frame or
         # create a new track if no matched.
         tracker.update_one(detections)
+        action_probs_text = []
 
         # Predict Actions of each track.
         for i, track in enumerate(tracker.tracks):
@@ -172,12 +173,20 @@ if __name__ == '__main__':
 
             action = 'pending..'
             clr = (0, 255, 0)
+
             # Use 30 frames time-steps to prediction.
             if len(track.keypoints_list) == 30:
                 pts = np.array(track.keypoints_list, dtype=np.float32)
                 out = action_model.predict(pts, frame.shape[:2])
+                action_idx = out[0].argmax()
                 action_name = action_model.class_names[out[0].argmax()]
+                action_confidence = out[0][action_idx]
+
                 action = '{}: {:.2f}%'.format(action_name, out[0].max() * 100)
+                # 클래스별 확률 저장
+                for idx, class_name in enumerate(action_model.class_names):
+                    action_probs_text.append(f"{class_name}: {out[0][idx] * 100:.1f}%")
+
                 if action_name == 'Fall Down':
                     clr = (255, 0, 0)
                     fall_detected = True
@@ -192,15 +201,18 @@ if __name__ == '__main__':
                 if args.show_skeleton:
                     frame = draw_single(frame, track.keypoints_list[-1])
                 frame = cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, 255, 0), 1)
-                frame = cv2.putText(frame, str(track_id), (center[0], center[1]), cv2.FONT_HERSHEY_COMPLEX,
+                frame = cv2.putText(frame, str(track_id), (center[0], center[1]), cv2.FONT_HERSHEY_SIMPLEX,
                                     0.4, (255, 0, 0), 2)
-                frame = cv2.putText(frame, action, (bbox[0] + 5, bbox[1] + 15), cv2.FONT_HERSHEY_COMPLEX,
+                frame = cv2.putText(frame, action, (bbox[0] + 5, bbox[1] + 15), cv2.FONT_HERSHEY_SIMPLEX,
                                     0.4, clr, 1)
-
         # Show Frame.
         frame = cv2.resize(frame, (0, 0), fx=2., fy=2.)
         frame = cv2.putText(frame, '%d, FPS: %f' % (f, 1.0 / (time.time() - fps_time)),
-                            (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+                            (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0), 1)
+        for i, prob_text in enumerate(action_probs_text):
+            frame = cv2.putText(frame, '%s' % prob_text, (10, 35 + i * 12),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 255), 1)
+
         frame = frame[:, :, ::-1]
         fps_time = time.time()
 
