@@ -157,6 +157,61 @@ class Tracker:
         # Remove deleted tracks.
         self.tracks = [t for t in self.tracks if not t.is_deleted()]
 
+    def update_one(self, detections):
+        """사람 1명만 추적"""
+        if len(detections) == 0:
+            # detection 없으면 기존 track만 갱신
+            if len(self.tracks) > 0:
+                self.tracks[0].mark_missed()
+                self.tracks = []
+
+            return
+
+        # confidence 가장 높은 detection 1개만 선택
+        best_detection = max(detections, key=lambda d: d.confidence)
+
+        if len(self.tracks) == 0:
+            # 아직 track이 없으면 새로 생성
+            self._initiate_track(best_detection)
+        else:
+            # 기존 track과 IoU 확인 후 갱신
+            track = self.tracks[0]
+            track_bbox = track.to_tlbr()
+            det_bbox = best_detection.tlbr
+
+            iou = self._calculate_iou(track_bbox, det_bbox)
+
+            if iou > (1.0 - self.max_iou_dist):
+                # 매칭 성공 → track 갱신
+                track.update(self.kf, best_detection)
+            else:
+                # 매칭 실패 → 기존 track 지우고 새로 시작
+                track.mark_missed()
+                if track.is_deleted():
+                    self.tracks = []
+                    self._initiate_track(best_detection)
+
+        # 항상 track은 1개만 유지
+        if len(self.tracks) > 1:
+            self.tracks = self.tracks[:1]
+
+    def _calculate_iou(self, bbox1, bbox2):
+        """Calculate IoU between two bboxes [x1, y1, x2, y2]"""
+        x1 = max(bbox1[0], bbox2[0])
+        y1 = max(bbox1[1], bbox2[1])
+        x2 = min(bbox1[2], bbox2[2])
+        y2 = min(bbox1[3], bbox2[3])
+
+        if x2 <= x1 or y2 <= y1:
+            return 0.0
+
+        intersection = (x2 - x1) * (y2 - y1)
+        area1 = (bbox1[2] - bbox1[0]) * (bbox1[3] - bbox1[1])
+        area2 = (bbox2[2] - bbox2[0]) * (bbox2[3] - bbox2[1])
+        union = area1 + area2 - intersection
+
+        return intersection / union if union > 0 else 0.0
+
     def _match(self, detections):
         confirmed_tracks, unconfirmed_tracks = [], []
         for i, t in enumerate(self.tracks):

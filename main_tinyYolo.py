@@ -60,8 +60,8 @@ if __name__ == '__main__':
                         help='Save display to video file.')
     par.add_argument('--device', type=str, default='cuda',
                         help='Device to run model on cpu or cuda.')
-    par.add_argument('--phone_number', type=str, default='01012345678',
-                        help='대쉬 없이 유저 전화번호 입력, 디폴트 = 01012345678')
+    par.add_argument('--phone_number', type=str,
+                        help='대쉬 없이 유저 전화번호 입력')
     args = par.parse_args()
 
     device = args.device
@@ -84,7 +84,7 @@ if __name__ == '__main__':
     pose_model = SPPE_FastPose(args.pose_backbone, inp_pose[0], inp_pose[1], device=device)
 
     # Tracker.
-    max_age = 30
+    max_age = 5
     tracker = Tracker(max_age=max_age, n_init=3)
 
     # Actions Estimate.
@@ -148,10 +148,9 @@ if __name__ == '__main__':
             poses = pose_model.predict(frame, detected[:, 0:4], detected[:, 4])
 
             # Create Detections object.
-            detections = [Detection(kpt2bbox(ps['keypoints'].numpy()),
-                                    np.concatenate((ps['keypoints'].numpy(),
-                                                    ps['kp_score'].numpy()), axis=1),
-                                    ps['kp_score'].mean().numpy()) for ps in poses]
+            detections = [Detection(kpt2bbox(ps['keypoints'].numpy()), # tlbr
+                                    np.concatenate((ps['keypoints'].numpy(),ps['kp_score'].numpy()), axis=1), # keypoints
+                                    ps['kp_score'].mean().numpy()) for ps in poses] # confidence
 
             # VISUALIZE.
             if args.show_detected:
@@ -160,7 +159,7 @@ if __name__ == '__main__':
 
         # Update tracks by matching each track information of current and previous frame or
         # create a new track if no matched.
-        tracker.update(detections)
+        tracker.update_one(detections)
 
         # Predict Actions of each track.
         for i, track in enumerate(tracker.tracks):

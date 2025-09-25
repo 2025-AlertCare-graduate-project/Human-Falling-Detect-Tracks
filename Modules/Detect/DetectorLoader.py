@@ -69,7 +69,29 @@ class TinyYOLOv3_onecls(object):
             detected[:, 0:2] = np.maximum(0, detected[:, 0:2] - expand_bb)
             detected[:, 2:4] = np.minimum(image_size[::-1], detected[:, 2:4] + expand_bb)
 
-        return detected
+            if len(detected) > 0:
+                score = detected[:, 4] * detected[:, 5]
+                highest_score_idx = torch.argmax(score)
+                final_score = score[highest_score_idx].item()
+
+                if final_score >= 0.5:  # 0.5가 안 넘으면 트랙킹 하지 않음
+                    detected = detected[highest_score_idx:highest_score_idx + 1]  # 텐서 차원 유지
+
+                    for i, det in enumerate(detected):
+                        x1, y1, x2, y2, obj_score, cls_conf, cls_id = det.tolist()
+                        print(f"[Detection {i}]")
+                        print(f"  Bounding Box: ({x1}, {y1}, {x2}, {y2})")
+                        print(f"  Objectness Score: {obj_score}")
+                        print(f"  Class Confidence: {cls_conf}")
+                        print(f"  Class ID: {int(cls_id)}")
+                        print(f"  ==> Score: {final_score}")
+
+                    return detected
+                else:
+                    print(f"No detection above threshold (final_score={final_score:.4f})")
+                    return None
+            else:
+                return None
 
 
 class ThreadDetection(object):
