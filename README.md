@@ -41,8 +41,6 @@ frames by hand for training ST-GCN model.
 1. Download all pre-trained models into ./Models folder.
 2. Run main.py
 ```
-    python main.py ${video file or camera source}
-
     # 실시간 실행
     python main_tinyYolo.py \
       -C 0 \
