@@ -7,7 +7,7 @@ import numpy as np
 
 from Detection.Utils import ResizePadding
 from Modules.Video.CameraLoader import CamLoader, CamLoader_Q
-from Modules.Detect.DetectorLoader_yolo11 import YOLO11_onecls
+from Modules.Detect.DetectorLoader import TinyYOLOv3_onecls
 
 from Modules.Pose.PoseEstimateLoader import SPPE_FastPose
 from Modules.Visualize.fn import draw_single
@@ -60,8 +60,8 @@ if __name__ == '__main__':
                         help='Save display to video file.')
     par.add_argument('--device', type=str, default='cuda',
                         help='Device to run model on cpu or cuda.')
-    par.add_argument('--phone_number', type=str, default='01012345678',
-                        help='대쉬 없이 유저 전화번호 입력, 디폴트 = 01012345678')
+    par.add_argument('--phone_number', type=str,
+                        help='대쉬 없이 유저 전화번호 입력')
     args = par.parse_args()
 
     device = args.device
@@ -77,14 +77,14 @@ if __name__ == '__main__':
 
     # DETECTION MODEL.
     inp_dets = args.detection_input_size
-    detect_model = YOLO11_onecls(inp_dets, device=device)
+    detect_model = TinyYOLOv3_onecls(inp_dets, device=device)
 
     # POSE MODEL.
     inp_pose = tuple(map(int, args.pose_input_size.split('x')))
     pose_model = SPPE_FastPose(args.pose_backbone, inp_pose[0], inp_pose[1], device=device)
 
     # Tracker.
-    max_age = 30
+    max_age = 5
     tracker = Tracker(max_age=max_age, n_init=3)
 
     # Actions Estimate.
@@ -148,10 +148,9 @@ if __name__ == '__main__':
             poses = pose_model.predict(frame, detected[:, 0:4], detected[:, 4])
 
             # Create Detections object.
-            detections = [Detection(kpt2bbox(ps['keypoints'].numpy()),
-                                    np.concatenate((ps['keypoints'].numpy(),
-                                                    ps['kp_score'].numpy()), axis=1),
-                                    ps['kp_score'].mean().numpy()) for ps in poses]
+            detections = [Detection(kpt2bbox(ps['keypoints'].numpy()), # tlbr
+                                    np.concatenate((ps['keypoints'].numpy(),ps['kp_score'].numpy()), axis=1), # keypoints
+                                    ps['kp_score'].mean().numpy()) for ps in poses] # confidence
 
             # VISUALIZE.
             if args.show_detected:
@@ -160,7 +159,8 @@ if __name__ == '__main__':
 
         # Update tracks by matching each track information of current and previous frame or
         # create a new track if no matched.
-        tracker.update(detections)
+        tracker.update_one(detections)
+        action_probs_text = []
 
         # Predict Actions of each track.
         for i, track in enumerate(tracker.tracks):
@@ -173,12 +173,20 @@ if __name__ == '__main__':
 
             action = 'pending..'
             clr = (0, 255, 0)
+
             # Use 30 frames time-steps to prediction.
             if len(track.keypoints_list) == 30:
                 pts = np.array(track.keypoints_list, dtype=np.float32)
                 out = action_model.predict(pts, frame.shape[:2])
+                action_idx = out[0].argmax()
                 action_name = action_model.class_names[out[0].argmax()]
+                action_confidence = out[0][action_idx]
+
                 action = '{}: {:.2f}%'.format(action_name, out[0].max() * 100)
+                # 클래스별 확률 저장
+                for idx, class_name in enumerate(action_model.class_names):
+                    action_probs_text.append(f"{class_name}: {out[0][idx] * 100:.1f}%")
+
                 if action_name == 'Fall Down':
                     clr = (255, 0, 0)
                     fall_detected = True
@@ -193,15 +201,18 @@ if __name__ == '__main__':
                 if args.show_skeleton:
                     frame = draw_single(frame, track.keypoints_list[-1])
                 frame = cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, 255, 0), 1)
-                frame = cv2.putText(frame, str(track_id), (center[0], center[1]), cv2.FONT_HERSHEY_COMPLEX,
+                frame = cv2.putText(frame, str(track_id), (center[0], center[1]), cv2.FONT_HERSHEY_SIMPLEX,
                                     0.4, (255, 0, 0), 2)
-                frame = cv2.putText(frame, action, (bbox[0] + 5, bbox[1] + 15), cv2.FONT_HERSHEY_COMPLEX,
+                frame = cv2.putText(frame, action, (bbox[0] + 5, bbox[1] + 15), cv2.FONT_HERSHEY_SIMPLEX,
                                     0.4, clr, 1)
-
         # Show Frame.
         frame = cv2.resize(frame, (0, 0), fx=2., fy=2.)
         frame = cv2.putText(frame, '%d, FPS: %f' % (f, 1.0 / (time.time() - fps_time)),
-                            (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+                            (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0), 1)
+        for i, prob_text in enumerate(action_probs_text):
+            frame = cv2.putText(frame, '%s' % prob_text, (10, 35 + i * 12),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 255), 1)
+
         frame = frame[:, :, ::-1]
         fps_time = time.time()
 
@@ -209,43 +220,44 @@ if __name__ == '__main__':
             writer.write(frame)
 
         now = time.time()
-        if now - clip_start_time >= clip_duration:
-            print(f"[INFO] 클립 종료 - 인덱스: {clip_index}")
-            print(f"[INFO] 최근 클립 리스트: {recent_clips}")
-            print(f"[INFO] pre_detected1: {pre_detected1}, pre_detected2: {pre_detected2}")
-            print(f"[INFO] fall_detected: {fall_detected}, detected_time: {detected_time}")
-            video_clip_writer.release()
+        if args.phone_number is not None:
+            if now - clip_start_time >= clip_duration:
+                print(f"[INFO] 클립 종료 - 인덱스: {clip_index}")
+                print(f"[INFO] 최근 클립 리스트: {recent_clips}")
+                print(f"[INFO] pre_detected1: {pre_detected1}, pre_detected2: {pre_detected2}")
+                print(f"[INFO] fall_detected: {fall_detected}, detected_time: {detected_time}")
+                video_clip_writer.release()
 
-            recent_clips.append(current_clip_filename)
-            if len(recent_clips) > 3:
-                os.remove(recent_clips.pop(0))  # 오래된 영상 삭제
+                recent_clips.append(current_clip_filename)
+                if len(recent_clips) > 3:
+                    os.remove(recent_clips.pop(0))  # 오래된 영상 삭제
 
-            if pre_detected2:
-                print("[Fall] 이전에 T였음. 영상 병합 시작...")
-                merged_path = os.path.join('OUTPUT', f'merged_{clip_index:03d}.mp4')
-                merge_videos(recent_clips[-3:], merged_path)
+                if pre_detected2:
+                    print("[Fall] 이전에 T였음. 영상 병합 시작...")
+                    merged_path = os.path.join('OUTPUT', f'merged_{clip_index:03d}.mp4')
+                    merge_videos(recent_clips[-3:], merged_path)
 
-                try:
-                    s3_url = upload_video(merged_path)
-                    print(f"[S3] 병합 영상 업로드 완료: {s3_url}")
-                    send_url(s3_url,args.phone_number, pre_fall_detected, pre_detected_time)
-                except Exception as e:
-                    print(f"[Error] 병합 영상 업로드 실패: {e}")
-                else:
-                    print("[Info] 감지되지 않음 → 병합 X")
+                    try:
+                        s3_url = upload_video(merged_path)
+                        print(f"[S3] 병합 영상 업로드 완료: {s3_url}")
+                        send_url(s3_url,args.phone_number, pre_fall_detected, pre_detected_time)
+                    except Exception as e:
+                        print(f"[Error] 병합 영상 업로드 실패: {e}")
+                    else:
+                        print("[Info] 감지되지 않음 → 병합 X")
 
-            clip_index += 1
-            pre_detected2 = pre_detected1
-            pre_detected1 = False
-            pre_fall_detected = fall_detected
-            pre_detected_time = detected_time
-            fall_detected = False
-            detected_time = "null"
+                clip_index += 1
+                pre_detected2 = pre_detected1
+                pre_detected1 = False
+                pre_fall_detected = fall_detected
+                pre_detected_time = detected_time
+                fall_detected = False
+                detected_time = "null"
 
-            current_clip_filename = os.path.join('OUTPUT', f'output_{clip_index:03d}.mp4')
-            video_clip_writer = cv2.VideoWriter(current_clip_filename, fourcc, fps, (width, height))
+                current_clip_filename = os.path.join('OUTPUT', f'output_{clip_index:03d}.mp4')
+                video_clip_writer = cv2.VideoWriter(current_clip_filename, fourcc, fps, (width, height))
 
-            clip_start_time = now
+                clip_start_time = now
 
         video_clip_writer.write(frame)
 
@@ -258,10 +270,11 @@ if __name__ == '__main__':
     if outvid:
         writer.release()
     video_clip_writer.release()
-    try:
-        s3_url = upload_video(current_clip_filename)
-        print(f"[S3] 마지막 클립 업로드 완료: {s3_url}")
-        send_url(s3_url, args.phone_number, fall_detected, detected_time)
-    except Exception as e:
-        print(f"[Error] 마지막 클립 S3 업로드 실패:", e)
+    if args.phone_number is not None:
+        try:
+            s3_url = upload_video(current_clip_filename)
+            print(f"[S3] 마지막 클립 업로드 완료: {s3_url}")
+            send_url(s3_url, args.phone_number, fall_detected, detected_time)
+        except Exception as e:
+            print(f"[Error] 마지막 클립 S3 업로드 실패:", e)
     cv2.destroyAllWindows()

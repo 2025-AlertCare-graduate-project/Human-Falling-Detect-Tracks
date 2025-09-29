@@ -1,27 +1,25 @@
 import os
 import cv2
-import time
 import torch
 import screeninfo
 import numpy as np
 import tkinter as tk
-import matplotlib.pyplot as plt
 from PIL import Image, ImageTk
 
 from Detection.Utils import ResizePadding
-from CameraLoader import CamLoader, CamLoader_Q
-from DetectorLoader import TinyYOLOv3_onecls
+from Modules.Video.CameraLoader import CamLoader, CamLoader_Q
+from Modules.Detect.DetectorLoader_yolo11 import YOLO11_onecls
 
-from PoseEstimateLoader import SPPE_FastPose
-from fn import draw_single
+from Modules.Pose.PoseEstimateLoader import SPPE_FastPose
+from Modules.Visualize.fn import draw_single
 
 from Track.Tracker import Detection, Tracker
-from ActionsEstLoader import TSSTG
+from Modules.Action.ActionsEstLoader import TSSTG
 
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 
 def get_monitor_from_coord(x, y):  # multiple monitor dealing.
@@ -39,12 +37,12 @@ class Models:
         self.pose_backbone = 'resnet50'
         self.show_detected = True
         self.show_skeleton = True
-        self.device = 'cuda'
+        self.device = 'mps'
 
         self.load_models()
 
     def load_models(self):
-        self.detect_model = TinyYOLOv3_onecls(self.inp_dets, device=self.device)
+        self.detect_model = YOLO11_onecls(self.inp_dets, device=self.device)
         self.pose_model = SPPE_FastPose(self.pose_backbone, self.inp_pose[0], self.inp_pose[1],
                                         device=self.device)
         self.tracker = Tracker(30, n_init=3)

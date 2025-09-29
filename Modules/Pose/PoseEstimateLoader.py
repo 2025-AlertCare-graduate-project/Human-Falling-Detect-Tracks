@@ -1,10 +1,8 @@
-import os
-import cv2
 import torch
 
 from SPPE.src.main_fast_inference import InferenNet_fast, InferenNet_fastRes50
 from SPPE.src.utils.img import crop_dets
-from pPose_nms import pose_nms
+from .pPose_nms import pose_nms
 from SPPE.src.utils.eval import getPrediction
 
 
@@ -13,7 +11,7 @@ class SPPE_FastPose(object):
                  backbone,
                  input_height=320,
                  input_width=256,
-                 device='cuda'):
+                 device='mps'):
         assert backbone in ['resnet50', 'resnet101'], '{} backbone is not support yet!'.format(backbone)
 
         self.inp_h = input_height

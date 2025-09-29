@@ -1,9 +1,6 @@
-# import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
-import os
 import cv2
-import torch
 import imageio
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from matplotlib.font_manager import FontProperties

@@ -1,2 +1,8 @@
-*.idea
-Models/*
+__pycache__/*
+.idea
+Models/
+*.pyc
+OUTPUT/
+*.env
+*.pt
+Dataset/
