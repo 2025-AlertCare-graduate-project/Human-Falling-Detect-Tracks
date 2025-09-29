@@ -42,9 +42,22 @@ frames by hand for training ST-GCN model.
 2. Run main.py
 ```
     python main.py ${video file or camera source}
+
+    # 실시간 실행
+    python main_tinyYolo.py \
+      -C 0 \
+      --device ${cpu or gpu or mps(for apple-silicon)} \
+      --phone_num ${phone-number}
+    
+    # 영상으로 실행하기
+    python main_tinyYolo.py \
+      -C ${video file path} \
+      --device ${cpu or gpu or mps(for apple-silicon)} 
 ```
 
 ## Reference
 
 - AlphaPose : https://github.com/Amanbhandula/AlphaPose
 - ST-GCN : https://github.com/yysijie/st-gcn
+
+
